@@ -4,7 +4,8 @@ export const catalogSchema: JSONSchema7 = {
   type: 'object',
   properties: {
     number: { type: 'string' },
-    limit: { type: 'number' },
+    limit: { type: ['number', 'string'] },
+    cursor: { type: 'string' },
   },
 };
 
@@ -12,6 +13,7 @@ export const collectionsSchema: JSONSchema7 = {
   type: 'object',
   properties: {
     number: { type: 'string' },
-    limit: { type: 'number' },
+    limit: { type: ['number', 'string'] },
+    cursor: { type: 'string' },
   },
 };

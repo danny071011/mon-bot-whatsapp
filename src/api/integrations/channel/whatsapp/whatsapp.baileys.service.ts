@@ -4901,8 +4901,8 @@ export class BaileysStartupService extends ChannelStartupService {
   //Business Controller
   public async fetchCatalog(instanceName: string, data: getCollectionsDto) {
     const jid = data.number ? createJid(data.number) : this.client?.user?.id;
-    const limit = data.limit || 10;
-    const cursor = null;
+    const limit = Number(data.limit) || 50;
+    const cursor = data.cursor || null;
 
     const onWhatsapp = (await this.whatsappNumber({ numbers: [jid] }))?.shift();
 
@@ -4912,7 +4912,14 @@ export class BaileysStartupService extends ChannelStartupService {
 
     try {
       const info = (await this.whatsappNumber({ numbers: [jid] }))?.shift();
-      const business = await this.fetchBusinessProfile(info?.jid);
+
+      let isBusiness = false;
+      try {
+        const business = await this.fetchBusinessProfile(info?.jid);
+        isBusiness = business?.isBusiness || false;
+      } catch (profileError) {
+        console.log('fetchBusinessProfile failed, continuing catalog fetch:', profileError?.message);
+      }
 
       let catalog = await this.getCatalog({ jid: info?.jid, limit, cursor });
       let nextPageCursor = catalog.nextPageCursor;
@@ -4924,7 +4931,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
       let productsCatalog = catalog.products || [];
       let countLoops = 0;
-      while (fetcherHasMore && countLoops < 4) {
+      while (fetcherHasMore && countLoops < 20) {
         catalog = await this.getCatalog({ jid: info?.jid, limit, cursor: nextPageCursor });
         nextPageCursor = catalog.nextPageCursor;
         nextPageCursorJson = nextPageCursor ? JSON.parse(atob(nextPageCursor)) : null;
@@ -4939,7 +4946,7 @@ export class BaileysStartupService extends ChannelStartupService {
       return {
         wuid: info?.jid || jid,
         numberExists: info?.exists,
-        isBusiness: business.isBusiness,
+        isBusiness: isBusiness,
         catalogLength: productsCatalog.length,
         catalog: productsCatalog,
       };
@@ -4971,7 +4978,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
   public async fetchCollections(instanceName: string, data: getCollectionsDto) {
     const jid = data.number ? createJid(data.number) : this.client?.user?.id;
-    const limit = data.limit <= 20 ? data.limit : 20; //(tem esse limite, não sei porque)
+    const limit = Number(data.limit) || 100;
 
     const onWhatsapp = (await this.whatsappNumber({ numbers: [jid] }))?.shift();
 
@@ -4981,14 +4988,22 @@ export class BaileysStartupService extends ChannelStartupService {
 
     try {
       const info = (await this.whatsappNumber({ numbers: [jid] }))?.shift();
-      const business = await this.fetchBusinessProfile(info?.jid);
+
+      let isBusiness = false;
+      try {
+        const business = await this.fetchBusinessProfile(info?.jid);
+        isBusiness = business?.isBusiness || false;
+      } catch (profileError) {
+        console.log('fetchBusinessProfile failed, continuing collections fetch:', profileError?.message);
+      }
+
       const collections = await this.getCollections(info?.jid, limit);
 
       return {
         wuid: info?.jid || jid,
         name: info?.name,
         numberExists: info?.exists,
-        isBusiness: business.isBusiness,
+        isBusiness: isBusiness,
         collectionsLength: collections?.length,
         collections: collections,
       };
